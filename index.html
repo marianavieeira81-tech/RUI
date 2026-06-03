@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Rui — Dashboard AO VIVO · GWM ADTSA</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#080808;--surface:#101010;--s2:#181818;--s3:#222;--s4:#2C2C2C;
+  --ac:#D4AF37;--ac-l:#F0DC82;--ac-d:#A88820;--ac-faint:rgba(212,175,55,.09);
+  --tx:#F0F0F0;--tx2:#A0A0A0;--tx3:#555;
+  --grn:#004225;--grn-l:#00A065;--grn-bg:rgba(0,160,101,.12);
+  --red:#E11D48;--red-bg:rgba(225,29,72,.12);
+  --bdr:#1E1E1E;--r:14px;--rsm:8px;
+  --sh:0 2px 20px rgba(0,0,0,.6);--sh-md:0 8px 40px rgba(0,0,0,.7);
+  --sh-gold:0 0 30px rgba(212,175,55,.12);
+  --sb:252px;--stripe:3px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);display:flex;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");opacity:.025;pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;top:0;left:0;right:0;height:var(--stripe);background:linear-gradient(90deg,#E11D48 0%,#D4AF37 35%,#D4AF37 65%,#004225 100%);z-index:200;}
+
+/* SIDEBAR */
+.sb{width:var(--sb);position:fixed;top:0;left:0;bottom:0;background:var(--surface);border-right:1px solid var(--bdr);display:flex;flex-direction:column;z-index:50;padding-top:var(--stripe);}
+.sb::after{content:'';position:absolute;top:0;right:-1px;width:1px;height:100%;background:linear-gradient(180deg,var(--ac) 0%,transparent 30%,transparent 70%,var(--ac-d) 100%);opacity:.4;}
+.sb-top{padding:28px 22px 20px;border-bottom:1px solid var(--bdr);}
+.sb-eye{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--tx3);margin-bottom:5px;font-weight:600;}
+.sb-brand{font-size:22px;font-weight:700;letter-spacing:-.03em;color:var(--tx);}
+.sb-brand span{color:var(--ac);font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:.05em;}
+.sb-live{margin-top:12px;display:inline-flex;align-items:center;gap:7px;background:rgba(225,29,72,.12);border-radius:20px;padding:5px 13px;border:1px solid rgba(225,29,72,.25);}
+.sb-live .dot{width:7px;height:7px;border-radius:50%;background:#E11D48;box-shadow:0 0 8px #E11D48;animation:blink 1.3s ease-in-out infinite;}
+.sb-live span{font-size:11px;color:#F87171;font-weight:700;letter-spacing:.08em;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+.sb-scroll{flex:1;overflow-y:auto;padding:16px 0;scrollbar-width:thin;scrollbar-color:var(--s3) transparent;}
+.sb-group{padding:0 14px;margin-bottom:4px;}
+.sb-lbl{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--tx3);padding:14px 8px 6px;font-weight:600;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--rsm);cursor:pointer;transition:all .2s;color:var(--tx2);font-size:13px;font-weight:500;position:relative;user-select:none;}
+.sb-item:hover{background:var(--s2);color:var(--tx);transform:translateX(2px);}
+.sb-item.active{background:var(--ac-faint);color:var(--ac);font-weight:600;border:1px solid rgba(212,175,55,.12);}
+.sb-item.active::before{content:'';position:absolute;left:-1px;top:25%;bottom:25%;width:3px;background:linear-gradient(180deg,var(--ac-l),var(--ac));border-radius:0 3px 3px 0;box-shadow:0 0 10px rgba(212,175,55,.5);}
+.sb-ico{width:16px;text-align:center;font-style:normal;flex-shrink:0;opacity:.7;}
+.sb-item.active .sb-ico{opacity:1;}
+.sb-chess{height:24px;background-image:repeating-conic-gradient(rgba(212,175,55,.06) 0% 25%,transparent 0% 50%);background-size:10px 10px;}
+.sb-foot{padding:18px 22px;border-top:1px solid var(--bdr);}
+.sb-foot .wk{font-size:11px;color:var(--tx3);}
+.sb-foot .wk strong{color:var(--tx2);display:block;font-size:12px;margin-bottom:2px;}
+
+/* MAIN */
+.main{margin-left:var(--sb);flex:1;padding:calc(var(--stripe) + 36px) 40px 80px;position:relative;z-index:1;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* LIVE STATUS BAR */
+.live-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:rgba(225,29,72,.07);border:1px solid rgba(225,29,72,.18);border-radius:var(--rsm);padding:10px 18px;margin-bottom:28px;}
+.lb-dot{width:8px;height:8px;border-radius:50%;background:#E11D48;box-shadow:0 0 10px #E11D48;animation:blink 1.3s infinite;flex-shrink:0;}
+.lb-text{font-size:12px;font-weight:600;color:#F87171;flex:1;}
+.lb-badge{font-size:10px;padding:3px 11px;border-radius:20px;font-weight:700;letter-spacing:.04em;transition:all .3s;}
+.lb-ok{background:var(--grn-bg);color:var(--grn-l);border:1px solid rgba(0,160,101,.25);}
+.lb-err{background:var(--red-bg);color:var(--red);border:1px solid rgba(225,29,72,.25);}
+.lb-wait{background:var(--s2);color:var(--tx3);border:1px solid var(--bdr);}
+.lb-ts{font-size:11px;color:var(--tx3);font-family:'DM Mono',monospace;}
+
+/* TOPBAR */
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:34px;}
+.topbar h1{font-size:26px;font-weight:700;letter-spacing:-.04em;background:linear-gradient(135deg,#fff 0%,var(--ac-l) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.eye{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--tx3);margin-bottom:5px;font-weight:600;}
+.topbar-r{display:flex;align-items:center;gap:12px;}
+.ts{font-size:12px;color:var(--tx3);text-align:right;}
+.ts strong{display:block;font-size:13px;font-weight:600;color:var(--tx2);font-family:'DM Mono',monospace;}
+.btn-ref{background:linear-gradient(135deg,var(--ac),var(--ac-d));color:#000;border:none;padding:10px 22px;border-radius:var(--rsm);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;box-shadow:0 4px 16px rgba(212,175,55,.25);}
+.btn-ref:hover{background:linear-gradient(135deg,var(--ac-l),var(--ac));transform:translateY(-2px);box-shadow:0 6px 24px rgba(212,175,55,.4);}
+.sec{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--tx3);margin:30px 0 16px;display:flex;align-items:center;gap:12px;font-weight:600;}
+.sec::before{content:'';width:20px;height:2px;background:linear-gradient(90deg,var(--ac),transparent);}
+.sec::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bdr),transparent);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.kpi,.card{animation:fadeUp .4s ease both;}
+.kpi:nth-child(1){animation-delay:.05s;}.kpi:nth-child(2){animation-delay:.1s;}.kpi:nth-child(3){animation-delay:.15s;}.kpi:nth-child(4){animation-delay:.2s;}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.kpi{background:var(--surface);border-radius:var(--r);padding:22px 24px;border:1px solid var(--bdr);box-shadow:var(--sh);cursor:default;transition:all .25s;position:relative;overflow:hidden;}
+.kpi:hover{border-color:rgba(212,175,55,.2);box-shadow:var(--sh-gold),var(--sh-md);transform:translateY(-2px);}
+.kpi.gold{background:linear-gradient(145deg,#130F00,#0A0800);border-color:rgba(212,175,55,.25);}
+.kpi.gold .kpi-lbl{color:#6A5520;}.kpi.gold .kpi-val{color:var(--ac);}
+.kpi-lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx3);margin-bottom:10px;font-weight:600;}
+.kpi-val{font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:8px;color:var(--tx);font-family:'Bebas Neue',cursive;}
+.kpi-sub{font-size:12px;color:var(--tx3);display:flex;align-items:center;gap:6px;}
+
+/* CARDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+.card{background:var(--surface);border-radius:var(--r);border:1px solid var(--bdr);box-shadow:var(--sh);padding:24px;transition:all .25s;position:relative;overflow:hidden;}
+.card:hover{border-color:var(--s4);transform:translateY(-1px);box-shadow:var(--sh-md);}
+.ctitle{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--tx3);margin-bottom:18px;font-weight:600;}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);padding:12px 14px;text-align:left;border-bottom:1px solid var(--bdr);white-space:nowrap;font-weight:600;}
+td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--bdr);color:var(--tx2);}
+tr:hover td{background:var(--s2);}
+tr:last-child td{border-bottom:none;}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:56px 20px;color:var(--tx3);}
+.empty-ico{font-size:36px;margin-bottom:14px;opacity:.35;}
+.empty-title{font-size:15px;font-weight:600;color:var(--tx2);margin-bottom:8px;}
+.empty-sub{font-size:12px;line-height:1.6;max-width:380px;margin:0 auto;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spinner{width:26px;height:26px;border:2px solid var(--s3);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px;}
+
+/* BADGES */
+.pill{display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+.up{background:var(--grn-bg);color:var(--grn-l);}.dn{background:var(--red-bg);color:var(--red);}.nu{background:var(--s2);color:var(--tx2);}
+.ptag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.04em;}
+.ptag.wa{background:rgba(37,211,102,.08);color:#25D366;border:1px solid rgba(37,211,102,.18);}
+.ptag.ig{background:rgba(225,48,108,.08);color:#e1306c;border:1px solid rgba(225,48,108,.18);}
+.sent{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:600;}
+.sent.pos{background:var(--grn-bg);color:var(--grn-l);}
+.sent.neu{background:var(--s2);color:var(--tx2);}
+.sent.neg{background:var(--red-bg);color:var(--red);}
+.stat-tag{display:inline-block;padding:2px 9px;border-radius:4px;font-size:11px;font-weight:600;}
+.st-ok{background:var(--ac-faint);color:var(--ac);}
+.st-end{background:var(--red-bg);color:var(--red);}
+.st-run{background:var(--s2);color:var(--tx2);}
+
+/* SCORE INLINE */
+.sc-cell{display:flex;align-items:center;gap:8px;}
+.sc-num{font-family:'DM Mono',monospace;font-weight:700;font-size:12px;min-width:26px;}
+.sc-bar{flex:1;background:var(--s3);border-radius:2px;height:3px;min-width:50px;}
+.sc-fill{height:100%;border-radius:2px;}
+
+/* CAUSAS BARS */
+.cbar{margin-bottom:9px;}
+.cbar-lbl{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;}
+.cbar-lbl span:first-child{color:var(--tx2);}
+.cbar-lbl span:last-child{color:var(--tx3);font-family:'DM Mono',monospace;}
+.cbar-track{height:3px;background:var(--s3);border-radius:2px;}
+.cbar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--ac),var(--ac-d));}
+
+/* FILA */
+.fila-card{background:var(--s2);border-radius:var(--rsm);padding:16px 18px;margin-bottom:10px;border:1px solid var(--bdr);display:flex;align-items:flex-start;gap:14px;transition:border-color .2s;}
+.fila-card:hover{border-color:var(--s4);}
+.fila-card.first{border-color:rgba(212,175,55,.25);background:linear-gradient(145deg,#130F00,var(--s2));}
+.fila-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.fila-name{font-size:14px;font-weight:600;color:var(--tx);margin-bottom:3px;}
+.fila-mod{font-size:12px;color:var(--tx3);margin-bottom:6px;}
+.fila-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.chip{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:var(--s3);color:var(--tx2);border:1px solid var(--bdr);}
+.fila-meta{text-align:right;flex-shrink:0;min-width:80px;}
+.fila-time{font-size:11px;font-weight:700;color:var(--ac);margin-bottom:2px;}
+.fila-date{font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace;}
+
+/* DIAG */
+.diag-block{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rsm);padding:16px;margin-bottom:14px;}
+.diag-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);}
+.diag-row:last-child{border-bottom:none;}
+.dkey{font-size:11px;color:var(--tx3);font-weight:600;}
+.dval{font-size:11px;color:var(--tx2);font-family:'DM Mono',monospace;text-align:right;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dval.ok{color:var(--grn-l);}.dval.err{color:var(--red);}.dval.wait{color:var(--ac);}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--bdr);border-radius:var(--rsm);padding:12px 20px;font-size:13px;color:var(--tx2);box-shadow:var(--sh-md);z-index:999;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sb">
+  <div class="sb-top">
+    <div class="sb-eye">GWM ADTSA · Recife</div>
+    <div class="sb-brand"><span>RUI</span> — Ao Vivo</div>
+    <div class="sb-live"><div class="dot"></div><span>AO VIVO</span></div>
+  </div>
+  <div class="sb-scroll">
+    <div class="sb-group">
+      <div class="sb-lbl">Visão Geral</div>
+      <div class="sb-item active" onclick="navTo('overview',this)"><i class="sb-ico">◈</i> Overview</div>
+      <div class="sb-item" onclick="navTo('leads',this)"><i class="sb-ico">◎</i> Todos os Leads</div>
+      <div class="sb-item" onclick="navTo('fila',this)"><i class="sb-ico">◷</i> Fila de Espera</div>
+    </div>
+    <div class="sb-group">
+      <div class="sb-lbl">Diagnóstico</div>
+      <div class="sb-item" onclick="navTo('diag',this)"><i class="sb-ico">⊡</i> Status da Integração</div>
+    </div>
+  </div>
+  <div class="sb-chess"></div>
+  <div class="sb-foot">
+    <div class="wk">
+      <strong id="sbWeekRange">—</strong>
+      Semana atual
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- BARRA LIVE -->
+  <div class="live-bar">
+    <div class="lb-dot"></div>
+    <div class="lb-text">Dados em tempo real · Agente Rui · GWM ADTSA Recife</div>
+    <span id="apiStatus" class="lb-badge lb-wait">Conectando...</span>
+    <div class="lb-ts">Últ. atualização: <span id="lastTs">—</span></div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- PAGE: OVERVIEW                                           -->
+  <!-- ======================================================= -->
+  <section class="page active" id="p-overview">
+    <div class="topbar">
+      <div>
+        <div class="eye">Inteligência de Leads · 30 dias</div>
+        <h1>Dashboard Ao Vivo</h1>
+      </div>
+      <div class="topbar-r">
+        <div class="ts"><div>Atualizado em</div><strong id="tsVal">—</strong></div>
+        <button class="btn-ref" onclick="fetchAll()">↺ Atualizar</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi gold">
+        <div class="kpi-lbl">Total de Leads · 30 dias</div>
+        <div class="kpi-val" id="kpiTotal">—</div>
+        <div class="kpi-sub">Todos os canais combinados</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Transferidos ao Consultor</div>
+        <div class="kpi-val" id="kpiTransf">—</div>
+        <div class="kpi-sub" id="kpiTxTransf">Taxa de transferência</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Score Médio Rui</div>
+        <div class="kpi-val" id="kpiScore">—</div>
+        <div class="kpi-sub">0 = Frio · 100 = Premium</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-lbl">Leads Esfriados</div>
+        <div class="kpi-val" id="kpiEsf">—</div>
+        <div class="kpi-sub" id="kpiTxEsf">Sem resposta final</div>
+      </div>
+    </div>
+
+    <!-- Cards de análise -->
+    <div class="g2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="ctitle">Distribuição de Score</div>
+        <div id="scoreDist">
+          <div class="empty"><div class="spinner"></div><div class="empty-title">Aguardando dados</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">Causas de Esfriamento</div>
+        <div id="causasEsf">
+          <div class="empty"><div class="spinner"></div><div class="empty-title">Aguardando dados</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela leads recentes -->
+    <div class="sec">Últimos leads registrados</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Lead</th><th>Canal</th><th>Etapa</th><th>Veículo</th><th>Score</th><th>Sentimento</th><th>Status</th><th>Atualizado</th>
+          </tr></thead>
+          <tbody id="tblOverview">
+            <tr><td colspan="8">
+              <div class="empty"><div class="spinner"></div>
+              <div class="empty-title">Aguardando dados do agente Rui</div>
+              <div class="empty-sub">O dashboard atualiza automaticamente a cada 30 segundos. Assim que o Rui registrar o primeiro lead, ele aparecerá aqui.</div>
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= -->
+  <!-- PAGE: TODOS OS LEADS                                     -->
+  <!-- ======================================================= -->
+  <section class="page" id="p-leads">
+    <div class="topbar">
+      <div>
+        <div class="eye">Todos os registros · 30 dias</div>
+        <h1>Leads</h1>
+      </div>
+      <div class="topbar-r">
+        <div class="ts"><div>Total</div><strong id="leadsFullCount">—</strong></div>
+        <button class="btn-ref" onclick="fetchAll()">↺ Atualizar</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Lead</th><th>Canal</th><th>Telefone / Sender ID</th><th>Etapa</th><th>Veículo</th>
+            <th>Score</th><th>Sentimento</th><th>Perfil Socioecon.</th>
+            <th>Causa Esf.</th><th>Status</th><th>Atualizado</th>
+          </tr></thead>
+          <tbody id="tblFull">
+            <tr><td colspan="11"><div class="empty"><div class="spinner"></div><div class="empty-title">Aguardando dados</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= -->
+  <!-- PAGE: FILA DE ESPERA                                     -->
+  <!-- ======================================================= -->
+  <section class="page" id="p-fila">
+    <div class="topbar">
+      <div>
+        <div class="eye">Leads aguardando estoque</div>
+        <h1>Fila de Espera</h1>
+      </div>
+      <div class="topbar-r">
+        <button class="btn-ref" onclick="fetchFila()">↺ Atualizar Fila</button>
+      </div>
+    </div>
+    <div class="sec">Na fila agora · <span id="filaBadge">aguardando...</span></div>
+    <div id="filaWrap">
+      <div class="empty">
+        <div class="spinner"></div>
+        <div class="empty-title">Aguardando dados da fila de espera</div>
+        <div class="empty-sub">O Rui registra automaticamente quando um lead aceita entrar na fila por falta de estoque.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= -->
+  <!-- PAGE: DIAGNÓSTICO                                        -->
+  <!-- ======================================================= -->
+  <section class="page" id="p-diag">
+    <div class="topbar">
+      <div>
+        <div class="eye">Verificação técnica da integração</div>
+        <h1>Status da Integração</h1>
+      </div>
+      <div class="topbar-r">
+        <button class="btn-ref" onclick="fetchAll()">↺ Testar Agora</button>
+      </div>
+    </div>
+
+    <div class="g2">
+      <div>
+        <div class="sec">Endpoint — Dashboard</div>
+        <div class="diag-block">
+          <div class="diag-row"><span class="dkey">URL</span><span class="dval" id="diagUrl" style="font-size:9px">—</span></div>
+          <div class="diag-row"><span class="dkey">Status HTTP</span><span class="dval" id="diagHttp">—</span></div>
+          <div class="diag-row"><span class="dkey">Última chamada</span><span class="dval" id="diagUlt">—</span></div>
+          <div class="diag-row"><span class="dkey">Leads recebidos</span><span class="dval" id="diagLeads">—</span></div>
+          <div class="diag-row"><span class="dkey">Stats recebidas</span><span class="dval" id="diagStats">—</span></div>
+          <div class="diag-row"><span class="dkey">Resultado</span><span class="dval" id="diagRes">—</span></div>
+        </div>
+
+        <div class="sec">Endpoint — Fila de Espera</div>
+        <div class="diag-block">
+          <div class="diag-row"><span class="dkey">URL</span><span class="dval" id="diagFilaUrl" style="font-size:9px">—</span></div>
+          <div class="diag-row"><span class="dkey">Status HTTP</span><span class="dval" id="diagFilaHttp">—</span></div>
+          <div class="diag-row"><span class="dkey">Leads na fila</span><span class="dval" id="diagFilaLeads">—</span></div>
+          <div class="diag-row"><span class="dkey">Resultado</span><span class="dval" id="diagFilaRes">—</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec">Campos detectados no último lead</div>
+        <div class="diag-block" id="diagCampos" style="max-height:280px;overflow-y:auto;">
+          <div class="empty" style="padding:20px"><div class="empty-title">Aguardando primeira chamada</div></div>
+        </div>
+
+        <div class="sec">Resumo da última resposta</div>
+        <div class="diag-block" style="max-height:250px;overflow-y:auto;">
+          <pre id="diagJson" style="font-size:9px;color:var(--tx3);white-space:pre-wrap;word-break:break-all;line-height:1.6">Nenhum dado recebido ainda.</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast">✓ Dados atualizados com sucesso</div>
+
+<script>
+// ============================================================
+// CONFIG — PRODUÇÃO REAL · SEM DADOS FICTÍCIOS
+// ============================================================
+const EP = {
+  dashboard: 'https://n8n-n8n.lrdyzi.easypanel.host/webhook/ml-dashboard-data',
+  fila:      'https://n8n-n8n.lrdyzi.easypanel.host/webhook/adtsa-fila-espera'
+};
+const HDR = {
+  'Content-Type':   'application/json',
+  'x-ml-secret':    'ADTSA-RUI-2026-wR4kN8v2X5j1',
+  'x-adtsa-secret': 'ADTSA-RUI-2026-wR4kN8v2X5j1'
+};
+const REFRESH = 30000;
+
+// Estado interno
+const ST = {
+  dashHttp: null, dashTs: null, dashLeads: 0, dashStats: false, dashErr: null,
+  filaHttp: null, filaLeads: 0, filaErr: null, rawData: null
+};
+
+// ============================================================
+// NAVEGAÇÃO
+// ============================================================
+function navTo(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('p-' + page).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function scColor(s) { return s >= 81 ? '#EF4444' : s >= 61 ? '#F97316' : s >= 41 ? '#EAB308' : s >= 21 ? '#22c55e' : '#38BDF8'; }
+function scLabel(s) { return s <= 25 ? 'Frio' : s <= 50 ? 'Morno' : s <= 70 ? 'Engajado' : s <= 85 ? 'Quente' : 'Premium'; }
+function fmtDt(iso) { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR'); }
+function fmtDtHr(iso) { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+function ago(iso) {
+  if (!iso) return '—';
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000), h = Math.floor(diff / 3600000), d = Math.floor(diff / 86400000);
+  if (d >= 1) return 'há ' + d + 'd';
+  if (h >= 1) return 'há ' + h + 'h';
+  if (m >= 1) return 'há ' + m + 'min';
+  return 'agora';
+}
+function ini(n) { return (n || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
+const AVC = ['#E11D48', '#7C3AED', '#0284C7', '#059669', '#D97706', '#0891B2', '#64748B', '#B45309'];
+function avc(i) { return AVC[i % AVC.length]; }
+function set(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+function setClass(id, v, cls) { const el = document.getElementById(id); if (!el) return; el.textContent = v; el.className = 'dval ' + cls; }
+function sentClass(s) { const x = (s || '').toLowerCase(); return x === 'entusiasmado' || x === 'positivo' ? 'pos' : x === 'frustrado' || x === 'desconfiado' ? 'neg' : 'neu'; }
+function statusTag(l) {
+  if (l.qualificado_em) return '<span class="stat-tag st-ok">Transferido</span>';
+  if (l.followup_status === 'encerrado') return '<span class="stat-tag st-end">Encerrado</span>';
+  return '<span class="stat-tag st-run">Em andamento</span>';
+}
+
+// ============================================================
+// FETCH DASHBOARD
+// ============================================================
+async function fetchDashboard() {
+  set('diagUrl', EP.dashboard);
+  try {
+    const res = await fetch(EP.dashboard, { method: 'GET', headers: HDR });
+    ST.dashHttp = res.status;
+    ST.dashTs = new Date().toISOString();
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    ST.rawData = data;
+    const leads = Array.isArray(data.leads) ? data.leads : [];
+    const stats = data.stats || null;
+    ST.dashLeads = leads.length;
+    ST.dashStats = !!stats;
+    ST.dashErr = null;
+    renderKPIs(stats);
+    renderScoreDist(stats);
+    renderCausas(stats);
+    renderOverviewTable(leads);
+    renderFullTable(leads);
+    updateDiagDash(true);
+    setStatus('ok', 'Conectado · N8N');
+    return leads;
+  } catch (e) {
+    ST.dashErr = e.message;
+    updateDiagDash(false);
+    setStatus('err', 'Falha na API');
+    return [];
+  }
+}
+
+// ============================================================
+// FETCH FILA
+// ============================================================
+async function fetchFila() {
+  set('diagFilaUrl', EP.fila);
+  try {
+    const res = await fetch(EP.fila, { method: 'GET', headers: HDR });
+    ST.filaHttp = res.status;
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const fila = Array.isArray(data.fila) ? data.fila : (Array.isArray(data) ? data : []);
+    ST.filaLeads = fila.length;
+    ST.filaErr = null;
+    renderFila(fila);
+    updateDiagFila(true);
+  } catch (e) {
+    ST.filaErr = e.message;
+    ST.filaLeads = 0;
+    updateDiagFila(false);
+    document.getElementById('filaWrap').innerHTML = `<div class="empty"><div class="empty-ico">⚠</div><div class="empty-title">Não foi possível carregar a fila</div><div class="empty-sub">${e.message}</div></div>`;
+  }
+}
+
+// ============================================================
+// RENDER KPIs
+// ============================================================
+function renderKPIs(stats) {
+  if (!stats) return;
+  set('kpiTotal', stats.total ?? '0');
+  set('kpiTransf', stats.transferidos ?? '0');
+  set('kpiScore', stats.scoreMedio ?? '0');
+  set('kpiEsf', stats.leadsEsfriados ?? '0');
+  set('kpiTxTransf', (stats.taxaTransferencia ?? 0) + '% de taxa de transferência');
+  set('kpiTxEsf', (stats.taxaConversao ?? 0) + '% convertidos em clientes');
+}
+
+// ============================================================
+// RENDER SCORE DISTRIBUTION
+// ============================================================
+function renderScoreDist(stats) {
+  const wrap = document.getElementById('scoreDist');
+  if (!wrap) return;
+  if (!stats?.distribuicaoScore) { wrap.innerHTML = '<div class="empty" style="padding:20px"><div class="empty-title">Sem dados de score</div></div>'; return; }
+  const dist = stats.distribuicaoScore;
+  const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1;
+  const items = [
+    { label: 'Premium (86–100)', key: 'premium', color: '#EF4444' },
+    { label: 'Quente (71–85)',   key: 'quentes',  color: '#F97316' },
+    { label: 'Engajado (51–70)', key: 'engajados', color: '#EAB308' },
+    { label: 'Morno (26–50)',    key: 'mornos',   color: '#22c55e' },
+    { label: 'Frio (0–25)',      key: 'frios',    color: '#38BDF8' },
+  ];
+  if (items.every(i => !dist[i.key])) {
+    wrap.innerHTML = '<div class="empty" style="padding:20px"><div class="empty-title">Sem dados de score ainda</div><div class="empty-sub">Aparecerá assim que o Rui qualificar os primeiros leads.</div></div>';
+    return;
+  }
+  wrap.innerHTML = items.map(it => {
+    const v = dist[it.key] || 0;
+    const pct = Math.round((v / total) * 100);
+    return `<div class="cbar">
+      <div class="cbar-lbl"><span>${it.label}</span><span>${v} · ${pct}%</span></div>
+      <div class="cbar-track"><div class="cbar-fill" style="width:${pct}%;background:${it.color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// RENDER CAUSAS ESFRIAMENTO
+// ============================================================
+function renderCausas(stats) {
+  const wrap = document.getElementById('causasEsf');
+  if (!wrap) return;
+  const causas = stats?.causasEsfriamento || [];
+  if (causas.length === 0) {
+    wrap.innerHTML = '<div class="empty" style="padding:20px"><div class="empty-title">Nenhuma causa registrada ainda</div><div class="empty-sub">Aparecerá quando leads esfriarem com causa identificada pelo Rui.</div></div>';
+    return;
+  }
+  const maxC = causas[0]?.count || 1;
+  wrap.innerHTML = causas.slice(0, 8).map(c => {
+    const pct = Math.round((c.count / maxC) * 100);
+    return `<div class="cbar">
+      <div class="cbar-lbl"><span>${c.label}</span><span>${c.count} · ${c.percentual}%</span></div>
+      <div class="cbar-track"><div class="cbar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// RENDER TABELA OVERVIEW (últimos 20)
+// ============================================================
+function renderOverviewTable(leads) {
+  const tbody = document.getElementById('tblOverview');
+  if (!tbody) return;
+  if (!leads.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="empty-ico">📭</div>
+      <div class="empty-title">Nenhum lead registrado ainda</div>
+      <div class="empty-sub">Assim que o Rui receber a primeira mensagem e registrar um lead no Supabase, ele aparecerá aqui automaticamente.</div>
+      </div></td></tr>`;
+    return;
+  }
+  const sorted = [...leads].sort((a, b) => new Date(b.atualizado_em || 0) - new Date(a.atualizado_em || 0));
+  tbody.innerHTML = sorted.slice(0, 20).map((l, i) => {
+    const sc = l.score_final || 0;
+    const scC = scColor(sc);
+    const canal = (l.canal || 'whatsapp').toLowerCase();
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div style="width:28px;height:28px;border-radius:50%;background:${avc(i)};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0">${ini(l.nome)}</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--tx)">${l.nome || '—'}</div>
+          <div style="font-size:9px;color:var(--tx3);font-family:'DM Mono',monospace">${(l.sender_id || '').slice(0, 18)}</div>
+        </div>
+      </div></td>
+      <td><span class="ptag ${canal === 'instagram' ? 'ig' : 'wa'}">${l.canal || 'WhatsApp'}</span></td>
+      <td style="font-size:11px;color:var(--tx3)">${l.etapa || '—'}</td>
+      <td style="font-size:12px">${l.veiculo_interesse || '—'}</td>
+      <td><div class="sc-cell">
+        <span class="sc-num" style="color:${scC}">${sc}</span>
+        <div class="sc-bar"><div class="sc-fill" style="width:${sc}%;background:${scC}"></div></div>
+      </div></td>
+      <td><span class="sent ${sentClass(l.sentimento_final)}">${l.sentimento_final || 'neutro'}</span></td>
+      <td>${statusTag(l)}</td>
+      <td style="font-size:11px;color:var(--tx3);font-family:'DM Mono',monospace">${ago(l.atualizado_em)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// RENDER TABELA COMPLETA
+// ============================================================
+function renderFullTable(leads) {
+  const tbody = document.getElementById('tblFull');
+  if (!tbody) return;
+  set('leadsFullCount', leads.length + ' lead' + (leads.length !== 1 ? 's' : ''));
+  if (!leads.length) {
+    tbody.innerHTML = '<tr><td colspan="11"><div class="empty"><div class="empty-ico">📭</div><div class="empty-title">Nenhum lead registrado</div></div></td></tr>';
+    return;
+  }
+  const sorted = [...leads].sort((a, b) => new Date(b.atualizado_em || 0) - new Date(a.atualizado_em || 0));
+  tbody.innerHTML = sorted.map(l => {
+    const sc = l.score_final || 0;
+    const scC = scColor(sc);
+    const canal = (l.canal || 'whatsapp').toLowerCase();
+    const causa = l.causa_esfriamento;
+    const perfil = l.perfil_socioeconomico;
+    return `<tr>
+      <td style="font-weight:600;color:var(--tx)">${l.nome || l.sender_id || '—'}</td>
+      <td><span class="ptag ${canal === 'instagram' ? 'ig' : 'wa'}">${l.canal || 'WhatsApp'}</span></td>
+      <td style="font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace">${l.telefone || l.sender_id || '—'}</td>
+      <td style="font-size:11px;color:var(--tx3)">${l.etapa || '—'}</td>
+      <td style="font-size:12px">${l.veiculo_interesse || '—'}</td>
+      <td><div class="sc-cell">
+        <span class="sc-num" style="color:${scC}">${sc}</span>
+        <div class="sc-bar"><div class="sc-fill" style="width:${sc}%;background:${scC}"></div></div>
+      </div></td>
+      <td><span class="sent ${sentClass(l.sentimento_final)}">${l.sentimento_final || 'neutro'}</span></td>
+      <td style="font-size:11px;color:var(--tx3)">${perfil || '—'}</td>
+      <td style="font-size:11px;color:${causa ? 'var(--red)' : 'var(--tx3)'}">${causa || '—'}</td>
+      <td>${statusTag(l)}</td>
+      <td style="font-size:10px;color:var(--tx3);font-family:'DM Mono',monospace">${fmtDt(l.atualizado_em)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// RENDER FILA DE ESPERA
+// ============================================================
+function renderFila(fila) {
+  const wrap = document.getElementById('filaWrap');
+  const badge = document.getElementById('filaBadge');
+  if (badge) badge.textContent = fila.length + ' lead' + (fila.length !== 1 ? 's' : '') + ' na fila';
+  if (!wrap) return;
+  if (!fila.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-ico">✅</div>
+      <div class="empty-title">Nenhum lead na fila de espera</div>
+      <div class="empty-sub">Quando o Rui registrar um lead por falta de estoque, aparecerá aqui automaticamente.</div></div>`;
+    return;
+  }
+  const sorted = [...fila].sort((a, b) => new Date(a.registrado_em || 0) - new Date(b.registrado_em || 0));
+  wrap.innerHTML = sorted.map((f, i) => {
+    const sc = f.score_final || 0;
+    const scC = scColor(sc);
+    const chips = [
+      f.perfil_classe ? `<span class="chip">${f.perfil_classe}</span>` : '',
+      f.perfil_socioeconomico ? `<span class="chip">Classe ${f.perfil_socioeconomico}</span>` : '',
+      f.idioma_detectado && f.idioma_detectado !== 'pt' ? `<span class="chip">🌐 ${f.idioma_detectado.toUpperCase()}</span>` : '',
+      f.status === 'notificado' ? `<span class="chip" style="color:var(--ac);border-color:rgba(212,175,55,.3)">✓ Notificado</span>` : '',
+    ].filter(Boolean).join('');
+    return `<div class="fila-card${i === 0 ? ' first' : ''}">
+      <div style="font-size:20px;font-weight:700;color:${i === 0 ? 'var(--ac)' : 'var(--tx3)'};font-family:'Bebas Neue',cursive;min-width:24px">${i + 1}</div>
+      <div class="fila-av" style="background:${avc(i)}">${ini(f.nome)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="fila-name">${f.nome || f.lead_sender_id || '—'}</div>
+        <div class="fila-mod">🚗 ${f.modelo || 'Modelo não informado'}${f.especificacoes ? ' · ' + f.especificacoes : ''}</div>
+        ${sc > 0 ? `<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:${scC}">${sc}/100</span><span style="font-size:10px;color:${scC}">${scLabel(sc)}</span></div>` : ''}
+        ${chips ? `<div class="fila-chips">${chips}</div>` : ''}
+        ${f.observacao ? `<div style="font-size:11px;color:var(--tx3);margin-top:5px;font-style:italic">"${f.observacao}"</div>` : ''}
+      </div>
+      <div class="fila-meta">
+        <div class="fila-time">${ago(f.registrado_em)}</div>
+        <div class="fila-date">${fmtDt(f.registrado_em)}</div>
+        ${f.telefone ? `<div style="font-size:9px;color:var(--tx3);margin-top:3px">${f.telefone}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// DIAGNÓSTICO
+// ============================================================
+function updateDiagDash(ok) {
+  set('diagUrl', EP.dashboard);
+  setClass('diagHttp', ST.dashHttp ? String(ST.dashHttp) : '—', ST.dashHttp === 200 ? 'ok' : 'err');
+  setClass('diagUlt', ST.dashTs ? fmtDtHr(ST.dashTs) : '—', ST.dashTs ? 'ok' : 'wait');
+  setClass('diagLeads', ST.dashLeads + ' lead(s) recebido(s)', ST.dashLeads > 0 ? 'ok' : 'wait');
+  setClass('diagStats', ST.dashStats ? '✓ Recebidas' : '✗ Ausentes', ST.dashStats ? 'ok' : 'err');
+  setClass('diagRes', ok ? '✓ Dados chegando corretamente' : '✗ Erro: ' + (ST.dashErr || 'desconhecido'), ok ? 'ok' : 'err');
+
+  if (ST.rawData?.leads?.length > 0) {
+    const sample = ST.rawData.leads[0];
+    const camposWrap = document.getElementById('diagCampos');
+    if (camposWrap) {
+      camposWrap.innerHTML = Object.entries(sample).map(([k, v]) => {
+        const hasVal = v !== null && v !== undefined && v !== '';
+        return `<div class="diag-row">
+          <span class="dkey">${k}</span>
+          <span class="dval ${hasVal ? 'ok' : 'wait'}" style="font-size:9px">${hasVal ? JSON.stringify(v).slice(0, 45) : 'null / vazio'}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  const jsonEl = document.getElementById('diagJson');
+  if (jsonEl && ST.rawData) {
+    jsonEl.textContent = JSON.stringify({
+      leads_count: ST.rawData.leads?.length,
+      stats_janela: ST.rawData.stats?.janela,
+      stats_total: ST.rawData.stats?.total,
+      stats_scoreMedio: ST.rawData.stats?.scoreMedio,
+      primeiro_lead: ST.rawData.leads?.[0]
+    }, null, 2);
+  }
+}
+
+function updateDiagFila(ok) {
+  set('diagFilaUrl', EP.fila);
+  setClass('diagFilaHttp', ST.filaHttp ? String(ST.filaHttp) : '—', ST.filaHttp === 200 ? 'ok' : 'err');
+  setClass('diagFilaLeads', ST.filaLeads + ' lead(s) na fila', ST.filaLeads > 0 ? 'ok' : 'wait');
+  setClass('diagFilaRes', ok ? '✓ Fila acessível' : '✗ Erro: ' + (ST.filaErr || 'desconhecido'), ok ? 'ok' : 'err');
+}
+
+function setStatus(type, text) {
+  const el = document.getElementById('apiStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'lb-badge lb-' + type;
+}
+
+// ============================================================
+// FETCH ALL + SEMANA
+// ============================================================
+async function fetchAll() {
+  setStatus('wait', 'Buscando...');
+  await fetchDashboard();
+  await fetchFila();
+  const now = new Date();
+  set('tsVal', now.toLocaleString('pt-BR'));
+  set('lastTs', now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+  const t = document.getElementById('toast');
+  if (t) { t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); }
+}
+
+function setWeekLabel() {
+  const now = new Date(), day = now.getDay();
+  const mon = new Date(now); mon.setDate(now.getDate() - ((day + 6) % 7));
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  set('sbWeekRange', fmt(mon) + ' – ' + fmt(sun));
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  setWeekLabel();
+  fetchAll();
+  setInterval(fetchAll, REFRESH);
+});
+</script>
+</body>
+</html>
