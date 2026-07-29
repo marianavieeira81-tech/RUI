@@ -165,9 +165,30 @@ tr:last-child td{border-bottom:none;}
 /* TOAST */
 .toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--bdr);border-radius:var(--rsm);padding:12px 20px;font-size:13px;color:var(--tx2);box-shadow:var(--sh-md);z-index:999;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none;}
 .toast.show{opacity:1;transform:translateY(0);}
+.login-overlay{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:var(--surface);border:1px solid var(--bdr);border-radius:var(--r);box-shadow:var(--sh-md);padding:36px 32px;width:100%;max-width:340px;text-align:center;}
+.login-box .eye{margin-bottom:6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);}
+.login-box h1{font-size:22px;font-weight:700;margin-bottom:10px;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 0%,var(--ac-l) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.login-sub{font-size:12.5px;color:var(--tx3);margin-bottom:20px;}
+.login-box input{width:100%;background:var(--s2);border:1px solid var(--bdr);color:var(--tx);border-radius:var(--rsm);padding:11px 14px;font-size:13px;font-family:inherit;margin-bottom:14px;}
+.login-box .btn-ref{width:100%;margin-left:0;}
+.login-err{color:var(--red);font-size:12px;margin-top:12px;}
+.sair-link{display:block;margin-top:10px;font-size:11px;color:var(--tx3);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;text-align:left;}
+.sair-link:hover{color:var(--red);}
 </style>
 </head>
 <body>
+
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="eye">GWM ADTSA · Recife</div>
+    <h1>RUI — Ao Vivo</h1>
+    <p class="login-sub">Digite a chave de acesso para continuar.</p>
+    <input type="password" id="login-input" placeholder="Chave de acesso" autocomplete="off">
+    <button class="btn-ref" id="login-btn" onclick="tentarLogin()">Entrar</button>
+    <div class="login-err" id="login-err" style="display:none"></div>
+  </div>
+</div>
 
 <!-- SIDEBAR -->
 <aside class="sb">
@@ -194,6 +215,7 @@ tr:last-child td{border-bottom:none;}
       <strong id="sbWeekRange">—</strong>
       Semana atual
     </div>
+    <button class="sair-link" onclick="sair()">Trocar chave de acesso</button>
   </div>
 </aside>
 
@@ -398,11 +420,14 @@ const EP = {
   dashboard: 'https://n8n-n8n.lrdyzi.easypanel.host/webhook/ml-dashboard-data',
   fila:      'https://n8n-n8n.lrdyzi.easypanel.host/webhook/adtsa-fila-espera'
 };
-const HDR = {
-  'Content-Type':   'application/json',
-  'x-ml-secret':    'ADTSA-RUI-2026-wR4kN8v2X5j1',
-  'x-adtsa-secret': 'ADTSA-RUI-2026-wR4kN8v2X5j1'
-};
+// A chave NÃO fica mais gravada no código — é digitada pelo usuário e guardada só em
+// sessionStorage (mesmo padrão do Monitor de Eventos, rui-monitor-dashboard.html).
+const SECRET_STORAGE_KEY = 'adtsa_dashboard_secret';
+function getSecret(){ return sessionStorage.getItem(SECRET_STORAGE_KEY); }
+function headersAuth(){
+  const s = getSecret() || '';
+  return { 'Content-Type': 'application/json', 'x-ml-secret': s, 'x-adtsa-secret': s };
+}
 const REFRESH = 30000;
 
 // Estado interno
@@ -455,9 +480,14 @@ function statusTag(l) {
 async function fetchDashboard() {
   set('diagUrl', EP.dashboard);
   try {
-    const res = await fetch(EP.dashboard, { method: 'GET', headers: HDR });
+    const res = await fetch(EP.dashboard, { method: 'GET', headers: headersAuth() });
     ST.dashHttp = res.status;
     ST.dashTs = new Date().toISOString();
+    if (res.status === 401 || res.status === 403) {
+      sessionStorage.removeItem(SECRET_STORAGE_KEY);
+      mostrarLogin('Chave de acesso inválida ou expirada. Digite novamente.');
+      throw new Error('Não autorizado');
+    }
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     ST.rawData = data;
@@ -488,8 +518,13 @@ async function fetchDashboard() {
 async function fetchFila() {
   set('diagFilaUrl', EP.fila);
   try {
-    const res = await fetch(EP.fila, { method: 'GET', headers: HDR });
+    const res = await fetch(EP.fila, { method: 'GET', headers: headersAuth() });
     ST.filaHttp = res.status;
+    if (res.status === 401 || res.status === 403) {
+      sessionStorage.removeItem(SECRET_STORAGE_KEY);
+      mostrarLogin('Chave de acesso inválida ou expirada. Digite novamente.');
+      throw new Error('Não autorizado');
+    }
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const fila = Array.isArray(data.fila) ? data.fila : (Array.isArray(data) ? data : []);
@@ -763,12 +798,50 @@ function setWeekLabel() {
 }
 
 // ============================================================
+// LOGIN (tela de senha)
+// ============================================================
+function mostrarLogin(msg){
+  document.getElementById('login-overlay').style.display = 'flex';
+  const errEl = document.getElementById('login-err');
+  if (msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  else { errEl.style.display = 'none'; }
+  const input = document.getElementById('login-input');
+  input.value = '';
+  input.focus();
+}
+function esconderLogin(){
+  document.getElementById('login-overlay').style.display = 'none';
+}
+function sair(){
+  sessionStorage.removeItem(SECRET_STORAGE_KEY);
+  mostrarLogin();
+}
+function tentarLogin(){
+  const val = document.getElementById('login-input').value.trim();
+  if (!val) return;
+  sessionStorage.setItem(SECRET_STORAGE_KEY, val);
+  esconderLogin();
+  iniciar();
+}
+document.getElementById('login-input').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') tentarLogin();
+});
+
+// ============================================================
 // INIT
 // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
+function iniciar() {
   setWeekLabel();
   fetchAll();
   setInterval(fetchAll, REFRESH);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  if (getSecret()) {
+    esconderLogin();
+    iniciar();
+  } else {
+    mostrarLogin();
+  }
 });
 </script>
 </body>
